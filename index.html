@@ -2,241 +2,189 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>CS质押借贷系统</title>
-<script src="https://cdn.jsdelivr.net/npm/web3@1.8.3/dist/web3.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS质押借贷</title>
+<script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui, sans-serif;}
-body{background:#f4f5f7;padding:16px;}
-.container{max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;padding:20px;}
-h2{text-align:center;margin-bottom:16px;color:#222;}
-.info-bar{padding:12px;background:#e8f2ff;border-radius:10px;margin-bottom:16px;word-break:break-all;font-size:14px;}
-.card{border:1px solid #e2e2e2;border-radius:12px;padding:16px;margin-bottom:16px;}
-.tip-text{color:#0057cc;margin:6px 0;font-size:15px;}
-input{width:100%;padding:12px;border:1px solid #cccccc;border-radius:8px;margin:8px 0;font-size:16px;}
-button{width:100%;padding:13px;border:0;border-radius:8px;font-size:16px;margin-top:8px;cursor:pointer;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f5f7fa;padding:16px;}
+.wrap{max-width:550px;margin:0 auto;background:#fff;padding:20px;border-radius:14px;}
+h2{text-align:center;margin-bottom:16px;}
+.status{padding:10px;background:#e8f3ff;border-radius:8px;margin-bottom:16px;word-break:break-all;}
+.box{border:1px solid #eee;border-radius:10px;padding:15px;margin-bottom:15px;}
+.tip{color:#0052cc;margin:5px 0;}
+input{width:100%;padding:11px;border:1px solid #ddd;border-radius:7px;margin:7px 0;font-size:16px;}
+button{width:100%;padding:12px;border:0;border-radius:7px;font-size:16px;margin-top:5px;}
 .btn-blue{background:#1677ff;color:#fff;}
 .btn-orange{background:#ff7800;color:#fff;}
 .btn-green{background:#009688;color:#fff;}
-.btn-gray{background:#666666;color:#fff;}
-.order-wrap{max-height:240px;overflow-y:auto;border:1px solid #ddd;border-radius:8px;padding:8px;margin:10px 0;}
-.order-item{padding:10px;border-bottom:1px solid #eee;font-size:14px;cursor:pointer;}
+.btn-gray{background:#666;color:#fff;}
+.order-box{max-height:220px;overflow:auto;border:1px solid #ddd;padding:8px;border-radius:8px;}
+.order-item{padding:9px;border-bottom:1px solid #eee;font-size:14px;cursor:pointer;}
 </style>
 </head>
 <body>
-<div class="container">
-<h2>CS质押借贷</h2>
-<div class="info-bar" id="walletStatus">正在连接TP钱包</div>
+<div class="wrap">
+<h2>CS质押借贷系统</h2>
+<div class="status" id="statusText">正在连接TP钱包...</div>
 
-<div class="card">
-  <div class="tip-text" id="pledgeMaxTip">最大可质押CS：0</div>
-  <input type="text" id="pledgeInput" placeholder="输入质押CS数量">
-  <button class="btn-blue" onclick="pledgeAsset()">质押CS（自动授权）</button>
+<div class="box">
+    <div class="tip">最大可质押CS：<span id="csBalance">0</span></div>
+    <input type="text" id="pledgeNum" placeholder="输入质押CS数量">
+    <button class="btn-blue" onclick="pledge()">质押CS（自动授权）</button>
 </div>
 
-<div class="card">
-  <div class="tip-text" id="borrowTip">选中订单后自动显示最大可借BSDT</div>
-  <button class="btn-orange" onclick="borrowFund()">申请借款BSDT</button>
+<div class="box">
+    <div class="tip">最大可借BSDT：<span id="borrowLimit">0</span></div>
+    <button class="btn-orange" onclick="borrow()">申请借款</button>
 </div>
 
-<div class="card">
-  <h4>我的订单（点击选中）</h4>
-  <div class="order-wrap" id="orderList">加载中...</div>
-  <button class="btn-gray" onclick="loadMyOrder()">刷新订单</button>
+<div class="box">
+    <h4>我的订单</h4>
+    <div class="order-box" id="orderList"></div>
+    <button class="btn-gray" onclick="loadOrders()">刷新订单</button>
 </div>
 
-<div class="card">
-  <input type="text" id="orderIdInput" readonly placeholder="已选中订单ID">
-  <div class="tip-text" id="repayTip">待还本息：0</div>
-  <button class="btn-orange" onclick="repayLoan()">归还BSDT（自动授权）</button>
+<div class="box">
+    <input readonly id="orderId">
+    <div class="tip">待还本息：<span id="debtText">0</span></div>
+    <button class="btn-orange" onclick="repay()">归还BSDT</button>
 </div>
 
-<div class="card">
-  <div class="tip-text">仅质押 / 还清欠款才可赎回；清算订单无法赎回</div>
-  <button class="btn-green" onclick="redeemAsset()">赎回质押CS</button>
-</div>
-
-<div class="card">
-  <input type="text" id="queryId" placeholder="输入订单ID查询详情">
-  <button class="btn-gray" onclick="queryOrder()">查询订单信息</button>
-  <div class="info-bar" id="orderDetail"></div>
+<div class="box">
+    <button class="btn-green" onclick="redeem()">赎回CS资产</button>
 </div>
 </div>
 
 <script>
-const CS_TOKEN = "0x858427abE7e4fa912D26E1e2E8851D5260F0d36e";
-const BSDT_TOKEN = "0x177401f63A997f65137c52e1178863284f455091";
-const LENDING_CONTRACT = "0x180713a5e1021dab077f765cbc88a2d5843388f1";
+// 固定地址
+const CS = "0x858427abE7e4fa912D26E1e2E8851D5260F0d36e";
+const BSDT = "0x177401f63A997f65137c52e1178863284f455091";
+const CONTRACT = "0x180713a5e1021dab077f765cbc88a2d5843388f1";
 
-const CONTRACT_ABI = [
-    {"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"borrowFund","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"calculateInterest","outputs":[{"internalType":"uint256","name":"totalInterest","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"csAmount","type":"uint256"}],"name":"getPledgeValue","outputs":[{"internalType":"uint256","name":"usdtValue","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"getOrderInfo","outputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"lockedCS","type":"uint256"},{"internalType":"uint256","name":"loanBSDT","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint8","name":"status","type":"uint8"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"orderTotal","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"csAmount","type":"uint256"}],"name":"pledgeAsset","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"redeemAsset","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"repayLoan","outputs":[],"stateMutability":"nonpayable","type":"function"}
+const ABI_CONTRACT = [
+{"inputs":[{"internalType":"uint256","name":"csAmount","type":"uint256"}],"name":"pledgeAsset","outputs":[],"stateMutability":"nonpayable","type":"function"},
+{"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"borrowFund","outputs":[],"stateMutability":"nonpayable","type":"function"},
+{"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"repayLoan","outputs":[],"stateMutability":"nonpayable","type":"function"},
+{"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"redeemAsset","outputs":[],"stateMutability":"nonpayable","type":"function"},
+{"inputs":[{"internalType":"uint256","name":"csAmount","type":"uint256"}],"name":"getPledgeValue","outputs":[{"internalType":"uint256","name":"usdtValue","type":"uint256"}],"stateMutability":"view","type":"function"},
+{"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"calculateInterest","outputs":[{"internalType":"uint256","name":"totalInterest","type":"uint256"}],"stateMutability":"view","type":"function"},
+{"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"getOrderInfo","outputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"lockedCS","type":"uint256"},{"internalType":"uint256","name":"loanBSDT","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint8","name":"status","type":"uint8"}],"stateMutability":"view","type":"function"},
+{"inputs":[],"name":"orderTotal","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
 ];
 
-const ERC20_ABI = [
-    {"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"},
-    {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}
+const ABI_ERC20 = [
+{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"},
+{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"}
 ];
 
 let web3;
-let userWallet = "";
-let lendContract;
-let csContract;
-let bsdtContract;
-let selectedOrder = null;
+let account = "";
+let contractInstance;
+let csToken;
+let selectedOid = null;
 
-// 钱包连接
-async function initConnect(){
+// 只执行一次初始化
+async function init(){
     if(!window.ethereum){
-        document.getElementById("walletStatus").innerText = "请在TP钱包内置浏览器打开页面";
-        return false;
+        document.getElementById("statusText").innerText = "请在TP钱包浏览器打开";
+        return;
     }
     web3 = new Web3(window.ethereum);
-    await window.ethereum.request({method:"eth_requestAccounts"});
-    const accounts = await web3.eth.getAccounts();
-    userWallet = accounts[0].toLowerCase();
-    document.getElementById("walletStatus").innerText = "已连接钱包："+userWallet;
+    const accounts = await web3.eth.requestAccounts();
+    account = accounts[0].toLowerCase();
 
-    lendContract = new web3.eth.Contract(CONTRACT_ABI, LENDING_CONTRACT);
-    csContract = new web3.eth.Contract(ERC20_ABI, CS_TOKEN);
-    bsdtContract = new web3.eth.Contract(ERC20_ABI, BSDT_TOKEN);
-    return true;
+    // 连接成功，修改顶部文字
+    document.getElementById("statusText").innerText = "已连接钱包：" + account;
+
+    contractInstance = new web3.eth.Contract(ABI_CONTRACT, CONTRACT);
+    csToken = new web3.eth.Contract(ABI_ERC20, CS);
+
+    // 加载余额
+    await loadBalance();
+    await loadOrders();
 }
 
-// 【修复后的余额读取】强制转字符串，避免BigNumber报错
-async function refreshCsBalance(){
-    if(!userWallet) return;
-    try{
-        // 关键：toString()把大数转为字符串
-        let balanceWei = await csContract.methods.balanceOf(userWallet).call();
-        balanceWei = balanceWei.toString();
-        const num = web3.utils.fromWei(balanceWei, "ether");
-        document.getElementById("pledgeMaxTip").innerText = "最大可质押CS："+num;
-    }catch(e){
-        document.getElementById("pledgeMaxTip").innerText = "读取余额失败，请刷新页面";
-    }
+// 读取CS余额（核心修复：地址不为空才请求）
+async function loadBalance(){
+    if(!account) return;
+    const raw = await csToken.methods.balanceOf(account).call();
+    const bal = web3.utils.fromWei(raw.toString(), "ether");
+    document.getElementById("csBalance").innerText = bal;
 }
 
 // 质押
-async function pledgeAsset(){
-    let ok = await initConnect();
-    if(!ok) return;
-    await refreshCsBalance();
-    const val = document.getElementById("pledgeInput").value.trim();
-    if(!val){alert("请输入质押数量");return;}
-    const wei = web3.utils.toWei(val.toString(),"ether");
-    await csContract.methods.approve(LENDING_CONTRACT, wei).send({from:userWallet});
-    alert("CS授权成功，确认质押交易");
-    await lendContract.methods.pledgeAsset(wei).send({from:userWallet});
-    alert("质押订单创建成功");
-    refreshCsBalance();
-    loadMyOrder();
+async function pledge(){
+    if(!account) await init();
+    const num = document.getElementById("pledgeNum").value;
+    if(!num) return alert("填写数量");
+    const wei = web3.utils.toWei(num, "ether");
+    await csToken.methods.approve(CONTRACT, wei).send({from:account});
+    await contractInstance.methods.pledgeAsset(wei).send({from:account});
+    alert("质押成功");
+    loadBalance();
+    loadOrders();
 }
 
 // 借款
-async function borrowFund(){
-    let ok = await initConnect();
-    if(!ok) return;
-    if(selectedOrder===null){alert("请先选中质押订单");return;}
-    await lendContract.methods.borrowFund(selectedOrder).send({from:userWallet});
-    alert("借款成功，BSDT已到账");
-    loadMyOrder();
+async function borrow(){
+    if(!selectedOid) return alert("先选择订单");
+    await contractInstance.methods.borrowFund(selectedOid).send({from:account});
+    alert("借款成功");
+    loadOrders();
 }
 
 // 加载订单
-async function loadMyOrder(){
-    let ok = await initConnect();
-    if(!ok) return;
-    const total = await lendContract.methods.orderTotal().call();
-    const box = document.getElementById("orderList");
-    box.innerHTML = "";
+async function loadOrders(){
+    const total = await contractInstance.methods.orderTotal().call();
+    let html = "";
     for(let i=0;i<Number(total);i++){
-        const order = await lendContract.methods.getOrderInfo(i).call();
-        if(order.user.toLowerCase() !== userWallet)continue;
-        let statusText = "";
-        switch(order.status){
-            case 0: statusText="【仅质押未借款】";break;
-            case 1: statusText="【已借款待还款】";break;
-            case 2: statusText="【已还清可赎回】";break;
-            case 3: statusText="【已清算，无法操作】";break;
-            case 4: statusText="【已赎回完毕】";break;
-        }
-        const csNum = web3.utils.fromWei(order.lockedCS.toString(),"ether");
-        const loanNum = web3.utils.fromWei(order.loanBSDT.toString(),"ether");
-        const div = document.createElement("div");
-        div.className = "order-item";
-        div.innerHTML = `订单ID:${i} | 质押CS:${csNum} | 借款BSDT:${loanNum} ${statusText}`;
-        div.onclick = ()=>selectOrder(i, order);
-        box.appendChild(div);
+        const o = await contractInstance.methods.getOrderInfo(i).call();
+        if(o.user.toLowerCase() !== account) continue;
+        html += `<div class="order-item" onclick="pickOrder(${i},${JSON.stringify(o).replace(/"/g,'\'')})">
+        ID${i} | CS:${web3.utils.fromWei(o.lockedCS.toString(),"ether")}
+        </div>`;
     }
-    if(box.innerHTML==="") box.innerHTML="<div class='order-item'>暂无订单</div>";
+    document.getElementById("orderList").innerHTML = html;
 }
 
 // 选中订单
-async function selectOrder(id, orderData){
-    selectedOrder = id;
-    document.getElementById("orderIdInput").value = id;
-    if(orderData.status === 0){
-        const maxWei = await lendContract.methods.getPledgeValue(orderData.lockedCS).call();
-        const borrowWei = BigInt(maxWei.toString()) * 60n / 100n;
-        document.getElementById("borrowTip").innerText = "最大可借BSDT："+web3.utils.fromWei(borrowWei.toString(),"ether");
-    }else{
-        document.getElementById("borrowTip").innerText = "该订单不可再借款";
+async function pickOrder(id,data){
+    selectedOid = id;
+    document.getElementById("orderId").value = id;
+    if(data.status === 0){
+        const val = await contractInstance.methods.getPledgeValue(data.lockedCS).call();
+        const borrow = BigInt(val.toString()) * 60n / 100n;
+        document.getElementById("borrowLimit").innerText = web3.utils.fromWei(borrow.toString(),"ether");
     }
-    if(orderData.status === 1){
-        const interestWei = await lendContract.methods.calculateInterest(id).call();
-        const totalDebt = BigInt(orderData.loanBSDT.toString()) + BigInt(interestWei.toString());
-        document.getElementById("repayTip").innerText = "待还本息BSDT："+web3.utils.fromWei(totalDebt.toString(),"ether");
-    }else{
-        document.getElementById("repayTip").innerText = "暂无欠款";
+    if(data.status === 1){
+        const interest = await contractInstance.methods.calculateInterest(id).call();
+        const total = BigInt(data.loanBSDT.toString()) + BigInt(interest.toString());
+        document.getElementById("debtText").innerText = web3.utils.fromWei(total.toString(),"ether");
     }
 }
 
 // 还款
-async function repayLoan(){
-    let ok = await initConnect();
-    if(!ok) return;
-    if(selectedOrder===null){alert("请选中订单");return;}
-    const maxApprove = web3.utils.toWei("999999999","ether");
-    await bsdtContract.methods.approve(LENDING_CONTRACT, maxApprove).send({from:userWallet});
-    alert("BSDT授权成功，确认还款");
-    await lendContract.methods.repayLoan(selectedOrder).send({from:userWallet});
+async function repay(){
+    if(!selectedOid) return;
+    const bsdt = new web3.eth.Contract(ABI_ERC20,BSDT);
+    await bsdt.methods.approve(CONTRACT, web3.utils.toWei("999999999","ether")).send({from:account});
+    await contractInstance.methods.repayLoan(selectedOid).send({from:account});
     alert("还款完成");
-    loadMyOrder();
+    loadOrders();
 }
 
 // 赎回
-async function redeemAsset(){
-    let ok = await initConnect();
-    if(!ok) return;
-    if(selectedOrder===null){alert("请选中订单");return;}
-    await lendContract.methods.redeemAsset(selectedOrder).send({from:userWallet});
-    alert("CS赎回成功");
-    refreshCsBalance();
-    loadMyOrder();
+async function redeem(){
+    if(!selectedOid) return;
+    await contractInstance.methods.redeemAsset(selectedOid).send({from:account});
+    alert("赎回成功");
+    loadBalance();
+    loadOrders();
 }
 
-// 查询订单
-async function queryOrder(){
-    let ok = await initConnect();
-    if(!ok) return;
-    const oid = document.getElementById("queryId").value;
-    const info = await lendContract.methods.getOrderInfo(oid).call();
-    document.getElementById("orderDetail").innerText = JSON.stringify(info,null,2);
-}
-
-// 页面打开：先连接钱包，再读取余额，互不冲突
-window.onload = async function(){
-    await initConnect();
-    await refreshCsBalance();
-    await loadMyOrder();
-}
+// 页面只初始化一次
+window.onload = init;
 </script>
 </body>
 </html>

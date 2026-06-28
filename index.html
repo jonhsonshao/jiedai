@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS质押借贷</title>
+<script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{padding:20px;background:#f7f8fa;font-family:system-ui;}
+.wrap{max-width:520px;margin:0 auto;background:#fff;padding:24px;border-radius:14px;}
+h2{text-align:center;margin-bottom:24px;color:#222;}
+.item{margin-bottom:16px;}
+label{display:block;margin-bottom:6px;color:#444;}
+input{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:16px;}
+.btn{width:100%;padding:13px;border:none;border-radius:8px;background:#1677ff;color:#fff;font-size:17px;margin-top:10px;cursor:pointer;}
+.tip{background:#e8f3ff;padding:12px;border-radius:8px;margin:12px 0;color:#0052cc;word-break:break-all;}
+.info-text{color:#666;margin:8px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2>CS质押借贷</h2>
+<div class="tip" id="walletStatus">正在连接钱包...</div>
+
+<div class="item">
+  <label>质押CS数量</label>
+  <input type="text" id="csInput" placeholder="输入质押数量" oninput="calcBorrow()">
+</div>
+
+<div class="info-text">
+  可借出BSDT预估：<span id="borrowPreview">0</span>
+</div>
+
+<button class="btn" onclick="doPledge()">确认质押并借款</button>
+
+<div class="item" style="margin-top:30px;">
+  <label>订单ID</label>
+  <input type="text" id="orderIdInput" placeholder="输入订单编号">
+</div>
+<button class="btn" style="background:#009688;" onclick="doRepay()">还款赎回质押资产</button>
+
+<div class="item" style="margin-top:20px;">
+  <label>查询订单信息</label>
+  <input type="text" id="queryOrderId" placeholder="输入订单编号">
+</div>
+<button class="btn" style="background:#666;" onclick="queryOrder()">查询订单</button>
+<div class="tip" id="orderResult"></div>
+</div>
+
+<script>
+// =========固定配置（已写死，用户无需填写）=========
+const CS_CONTRACT = "0x858427abE7e4fa912D26E1e2E8851D5260F0d36e";
+const CONTRACT_ADDRESS = ""; // 部署后把借贷合约地址填在这里
+const RPC = "https://bsc-dataseed1.binance.org/";
+
+const CONTRACT_ABI = [
+  {"inputs":[{"internalType":"uint256","name":"csAmount","type":"uint256"}],"name":"pledgeAndBorrow","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"repayAndRedeem","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"orderId","type":"uint256"}],"name":"getOrder","outputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"pledgeCS","type":"uint256"},{"internalType":"uint256","name":"loanBSDT","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"bool","name":"isLiquidated","type":"bool"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"csAmt","type":"uint256"}],"name":"getCSValue","outputs":[{"internalType":"uint256","name":"usdtValue","type":"uint256"}],"stateMutability":"view","type":"function"}
+];
+
+const ERC20_ABI = [
+  {"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"}
+];
+
+let web3;
+let contract;
+let csToken;
+let userAddr;
+
+// 初始化钱包
+async function init(){
+  if(!window.ethereum){
+    document.getElementById("walletStatus").innerText = "请在TP钱包内置浏览器打开";
+    return;
+  }
+  web3 = new Web3(window.ethereum);
+  await window.ethereum.request({method:"eth_requestAccounts"});
+  const accounts = await web3.eth.getAccounts();
+  userAddr = accounts[0];
+  document.getElementById("walletStatus").innerText = "已连接钱包：" + userAddr;
+  contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+  csToken = new web3.eth.Contract(ERC20_ABI, CS_CONTRACT);
+}
+init();
+
+// 实时计算可借数量 质押价值*60%
+async function calcBorrow(){
+  const numStr = document.getElementById("csInput").value;
+  if(!numStr) return;
+  try{
+    const weiVal = web3.utils.toWei(numStr, "ether");
+    const usdtVal = await contract.methods.getCSValue(weiVal).call();
+    const borrowWei = Math.floor(Number(usdtVal) * 0.6);
+    const borrowNum = web3.utils.fromWei(String(borrowWei), "ether");
+    document.getElementById("borrowPreview").innerText = borrowNum;
+  }catch(e){
+    document.getElementById("borrowPreview").innerText = "计算失败";
+  }
+}
+
+// 质押：先自动授权（额度=质押数量），再执行借款
+async function doPledge(){
+  await init();
+  const inputVal = document.getElementById("csInput").value.trim();
+  if(!inputVal){
+    alert("请输入质押CS数量");
+    return;
+  }
+  const amountWei = web3.utils.toWei(inputVal, "ether");
+  try{
+    // 第一步自动授权，授权额度等于本次质押数量
+    await csToken.methods.approve(CONTRACT_ADDRESS, amountWei).send({from:userAddr});
+    alert("授权成功，开始质押借款");
+    // 第二步质押借款
+    await contract.methods.pledgeAndBorrow(amountWei).send({from:userAddr});
+    alert("质押完成，BSDT已发放至您钱包");
+  }catch(err){
+    console.error(err);
+    alert("交易失败");
+  }
+}
+
+// 还款赎回
+async function doRepay(){
+  await init();
+  const oid = document.getElementById("orderIdInput").value;
+  if(!oid){
+    alert("填写订单ID");
+    return;
+  }
+  try{
+    await contract.methods.repayAndRedeem(oid).send({from:userAddr});
+    alert("还款成功，已赎回CS代币");
+  }catch(err){
+    alert("赎回失败，可能已达到清算线被锁定");
+  }
+}
+
+// 查询订单
+async function queryOrder(){
+  await init();
+  const oid = document.getElementById("queryOrderId").value;
+  const res = await contract.methods.getOrder(oid).call();
+  document.getElementById("orderResult").innerText = JSON.stringify(res,null,2);
+}
+</script>
+</body>
+</html>

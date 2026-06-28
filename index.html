@@ -14,7 +14,8 @@ h2{text-align:center;margin-bottom:16px;}
 .box{border:1px solid #eee;border-radius:10px;padding:15px;margin-bottom:15px;}
 .tip{color:#0052cc;margin:5px 0;}
 input{width:100%;padding:11px;border:1px solid #ddd;border-radius:7px;margin:7px 0;font-size:16px;}
-button{width:100%;padding:12px;border:0;border-radius:7px;font-size:16px;margin-top:5px;}
+button{width:100%;padding:12px;border:0;border-radius:7px;font-size:16px;margin-top:5px;cursor:pointer;}
+button:disabled{background:#cccccc !important;color:#888;pointer-events:none;}
 .btn-blue{background:#1677ff;color:#fff;}
 .btn-orange{background:#ff7800;color:#fff;}
 .btn-green{background:#009688;color:#fff;}
@@ -36,11 +37,11 @@ button{width:100%;padding:12px;border:0;border-radius:7px;font-size:16px;margin-
 
 <div class="box">
     <div class="tip">最大可借BSDT：<span id="borrowLimit">0</span></div>
-    <button class="btn-orange" onclick="borrow()">申请借款</button>
+    <button class="btn-orange" id="borrowBtn" onclick="borrow()" disabled>申请借款</button>
 </div>
 
 <div class="box">
-    <h4>我的订单</h4>
+    <h4>我的订单（点击选中）</h4>
     <div class="order-box" id="orderList"></div>
     <button class="btn-gray" onclick="loadOrders()">刷新订单</button>
 </div>
@@ -48,16 +49,16 @@ button{width:100%;padding:12px;border:0;border-radius:7px;font-size:16px;margin-
 <div class="box">
     <input readonly id="orderId">
     <div class="tip">待还本息：<span id="debtText">0</span></div>
-    <button class="btn-orange" onclick="repay()">归还BSDT</button>
+    <button class="btn-orange" id="repayBtn" onclick="repay()" disabled>归还BSDT</button>
 </div>
 
 <div class="box">
-    <button class="btn-green" onclick="redeem()">赎回CS资产</button>
+    <button class="btn-green" id="redeemBtn" onclick="redeem()" disabled>赎回CS资产</button>
 </div>
 </div>
 
 <script>
-// 固定地址
+// 固化地址
 const CS = "0x858427abE7e4fa912D26E1e2E8851D5260F0d36e";
 const BSDT = "0x177401f63A997f65137c52e1178863284f455091";
 const CONTRACT = "0x180713a5e1021dab077f765cbc88a2d5843388f1";
@@ -83,107 +84,169 @@ let account = "";
 let contractInstance;
 let csToken;
 let selectedOid = null;
+let currentOrderData = null;
 
-// 只执行一次初始化
+// 钱包初始化仅执行一次
 async function init(){
     if(!window.ethereum){
-        document.getElementById("statusText").innerText = "请在TP钱包浏览器打开";
+        document.getElementById("statusText").innerText = "请在TP钱包内置浏览器打开";
         return;
     }
     web3 = new Web3(window.ethereum);
-    const accounts = await web3.eth.requestAccounts();
+    await window.ethereum.request({method:"eth_requestAccounts"});
+    const accounts = await web3.eth.getAccounts();
     account = accounts[0].toLowerCase();
-
-    // 连接成功，修改顶部文字
-    document.getElementById("statusText").innerText = "已连接钱包：" + account;
+    document.getElementById("statusText").innerText = "已连接钱包："+account;
 
     contractInstance = new web3.eth.Contract(ABI_CONTRACT, CONTRACT);
     csToken = new web3.eth.Contract(ABI_ERC20, CS);
 
-    // 加载余额
     await loadBalance();
     await loadOrders();
 }
 
-// 读取CS余额（核心修复：地址不为空才请求）
+// 读取CS余额
 async function loadBalance(){
-    if(!account) return;
     const raw = await csToken.methods.balanceOf(account).call();
     const bal = web3.utils.fromWei(raw.toString(), "ether");
     document.getElementById("csBalance").innerText = bal;
 }
 
-// 质押
+// 质押操作
 async function pledge(){
-    if(!account) await init();
-    const num = document.getElementById("pledgeNum").value;
-    if(!num) return alert("填写数量");
-    const wei = web3.utils.toWei(num, "ether");
+    const num = document.getElementById("pledgeNum").value.trim();
+    if(!num){alert("请输入质押数量");return;}
+    const wei = web3.utils.toWei(num,"ether");
     await csToken.methods.approve(CONTRACT, wei).send({from:account});
     await contractInstance.methods.pledgeAsset(wei).send({from:account});
-    alert("质押成功");
+    alert("质押订单创建成功");
     loadBalance();
     loadOrders();
 }
 
-// 借款
+// 借款操作
 async function borrow(){
-    if(!selectedOid) return alert("先选择订单");
     await contractInstance.methods.borrowFund(selectedOid).send({from:account});
     alert("借款成功");
     loadOrders();
+    resetButtonStatus();
 }
 
-// 加载订单
+// 还款操作
+async function repay(){
+    const bsdt = new web3.eth.Contract(ABI_ERC20,BSDT);
+    const max = web3.utils.toWei("999999999","ether");
+    await bsdt.methods.approve(CONTRACT,max).send({from:account});
+    await contractInstance.methods.repayLoan(selectedOid).send({from:account});
+    alert("还款完成");
+    loadOrders();
+    resetButtonStatus();
+}
+
+// 赎回操作
+async function redeem(){
+    await contractInstance.methods.redeemAsset(selectedOid).send({from:account});
+    alert("CS赎回成功");
+    loadBalance();
+    loadOrders();
+    resetButtonStatus();
+}
+
+// 加载我的订单列表
 async function loadOrders(){
     const total = await contractInstance.methods.orderTotal().call();
     let html = "";
     for(let i=0;i<Number(total);i++){
         const o = await contractInstance.methods.getOrderInfo(i).call();
         if(o.user.toLowerCase() !== account) continue;
-        html += `<div class="order-item" onclick="pickOrder(${i},${JSON.stringify(o).replace(/"/g,'\'')})">
-        ID${i} | CS:${web3.utils.fromWei(o.lockedCS.toString(),"ether")}
-        </div>`;
+        let statusTxt = "";
+        switch(o.status){
+            case 0: statusTxt="【仅质押，可借款可赎回】";break;
+            case 1: statusTxt="【已借款，待还款】";break;
+            case 2: statusTxt="【已还清，可赎回】";break;
+            case 3: statusTxt="【已清算，锁定】";break;
+            case 4: statusTxt="【已赎回完毕】";break;
+        }
+        html += `<div class="order-item" onclick="selectOrder(${i})">订单ID:${i} | 质押CS:${web3.utils.fromWei(o.lockedCS.toString(),"ether")} ${statusTxt}</div>`;
     }
-    document.getElementById("orderList").innerHTML = html;
+    document.getElementById("orderList").innerHTML = html || "<div class='order-item'>暂无订单</div>";
+    resetButtonStatus();
 }
 
-// 选中订单
-async function pickOrder(id,data){
+// 选中订单，读取额度+控制按钮锁定状态
+async function selectOrder(id){
     selectedOid = id;
     document.getElementById("orderId").value = id;
-    if(data.status === 0){
-        const val = await contractInstance.methods.getPledgeValue(data.lockedCS).call();
-        const borrow = BigInt(val.toString()) * 60n / 100n;
-        document.getElementById("borrowLimit").innerText = web3.utils.fromWei(borrow.toString(),"ether");
+    currentOrderData = await contractInstance.methods.getOrderInfo(id).call();
+
+    // 1、计算最大可借BSDT（修复数值为0的BUG，不做JSON序列化）
+    if(currentOrderData.status === 0){
+        const valueWei = await contractInstance.methods.getPledgeValue(currentOrderData.lockedCS).call();
+        const borrowWei = (BigInt(valueWei.toString()) * 60n) / 100n;
+        document.getElementById("borrowLimit").innerText = web3.utils.fromWei(borrowWei.toString(),"ether");
+    }else{
+        document.getElementById("borrowLimit").innerText = "不可借款";
     }
-    if(data.status === 1){
-        const interest = await contractInstance.methods.calculateInterest(id).call();
-        const total = BigInt(data.loanBSDT.toString()) + BigInt(interest.toString());
-        document.getElementById("debtText").innerText = web3.utils.fromWei(total.toString(),"ether");
+
+    // 2、计算待还本息
+    if(currentOrderData.status === 1){
+        const interestWei = await contractInstance.methods.calculateInterest(id).call();
+        const totalDebt = BigInt(currentOrderData.loanBSDT.toString()) + BigInt(interestWei.toString());
+        document.getElementById("debtText").innerText = web3.utils.fromWei(totalDebt.toString(),"ether");
+    }else{
+        document.getElementById("debtText").innerText = "无欠款";
+    }
+
+    // 3、严格控制按钮启用/禁用
+    setBtnByStatus(currentOrderData.status);
+}
+
+// 根据订单状态自动锁定按钮（核心修复）
+function setBtnByStatus(status){
+    const btnBorrow = document.getElementById("borrowBtn");
+    const btnRepay = document.getElementById("repayBtn");
+    const btnRedeem = document.getElementById("redeemBtn");
+
+    // 全部先禁用
+    btnBorrow.disabled = true;
+    btnRepay.disabled = true;
+    btnRedeem.disabled = true;
+
+    switch(status){
+        case 0:
+            // 仅质押未借款：开放借款 + 开放赎回
+            btnBorrow.disabled = false;
+            btnRedeem.disabled = false;
+            break;
+        case 1:
+            // 已借款：只开放还款，赎回锁定
+            btnRepay.disabled = false;
+            break;
+        case 2:
+            // 已还清：只开放赎回
+            btnRedeem.disabled = false;
+            break;
+        case 3:
+        case 4:
+            // 清算/已赎回：全部锁定
+            break;
     }
 }
 
-// 还款
-async function repay(){
-    if(!selectedOid) return;
-    const bsdt = new web3.eth.Contract(ABI_ERC20,BSDT);
-    await bsdt.methods.approve(CONTRACT, web3.utils.toWei("999999999","ether")).send({from:account});
-    await contractInstance.methods.repayLoan(selectedOid).send({from:account});
-    alert("还款完成");
-    loadOrders();
+// 清空选中，重置按钮
+function resetButtonStatus(){
+    selectedOid = null;
+    currentOrderData = null;
+    document.getElementById("orderId").value = "";
+    document.getElementById("borrowLimit").innerText = "0";
+    document.getElementById("debtText").innerText = "0";
+
+    document.getElementById("borrowBtn").disabled = true;
+    document.getElementById("repayBtn").disabled = true;
+    document.getElementById("redeemBtn").disabled = true;
 }
 
-// 赎回
-async function redeem(){
-    if(!selectedOid) return;
-    await contractInstance.methods.redeemAsset(selectedOid).send({from:account});
-    alert("赎回成功");
-    loadBalance();
-    loadOrders();
-}
-
-// 页面只初始化一次
+// 页面初始化
 window.onload = init;
 </script>
 </body>

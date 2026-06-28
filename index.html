@@ -38,7 +38,7 @@ button:disabled{background:#cccccc !important;color:#888;pointer-events:none;}
 <div class="box">
     <div class="tip">授信上限BSDT：<span id="borrowLimit">0</span></div>
     <input type="text" id="borrowInput" placeholder="手动输入借款BSDT数量">
-    <button class="btn-orange" id="borrowBtn" disabled onclick="borrow()">确认借款（仅授权输入金额）</button>
+    <button class="btn-orange" id="borrowBtn" disabled onclick="borrow()">确认借款（仅消耗Gas）</button>
 </div>
 
 <div class="box">
@@ -50,7 +50,7 @@ button:disabled{background:#cccccc !important;color:#888;pointer-events:none;}
 <div class="box">
     <input readonly id="orderId">
     <div class="tip">待还本息BSDT：<span id="debtText">0</span></div>
-    <button class="btn-orange" id="repayBtn" disabled onclick="repay()">归还BSDT</button>
+    <button class="btn-orange" id="repayBtn" disabled onclick="repay()">归还BSDT（自动授权）</button>
 </div>
 
 <div class="box">
@@ -112,7 +112,7 @@ async function loadBalance(){
     document.getElementById("csBalance").innerText = bal;
 }
 
-// 质押
+// 质押：仅授权CS
 async function pledge(){
     const num = document.getElementById("pledgeNum").value.trim();
     if(!num){alert("请输入质押数量");return;}
@@ -124,7 +124,7 @@ async function pledge(){
     loadOrders();
 }
 
-// 借款（核心修复：点击不再阻塞，只授权用户输入的金额）
+// 【核心修改：借款完全删掉BSDT授权，只调用合约】
 async function borrow(){
     let inputVal = document.getElementById("borrowInput").value.trim();
     if(!inputVal){
@@ -135,16 +135,14 @@ async function borrow(){
         alert("不能超过授信上限");
         return;
     }
-    let wei = web3.utils.toWei(inputVal,"ether");
-    // 仅授权本次输入的金额，不会无限授权
-    await bsdtToken.methods.approve(CONTRACT, wei).send({from:account});
+    // 直接调用借款，没有任何BSDT授权交易
     await contractInstance.methods.borrowFund(selectedOid).send({from:account});
     alert("借款成功");
     document.getElementById("borrowInput").value="";
     loadOrders();
 }
 
-// 还款
+// 还款：在这里才执行BSDT授权
 async function repay(){
     await bsdtToken.methods.approve(CONTRACT, web3.utils.toWei("999999999","ether")).send({from:account});
     await contractInstance.methods.repayLoan(selectedOid).send({from:account});
@@ -160,7 +158,7 @@ async function redeem(){
     loadOrders();
 }
 
-// 加载订单并标注订单类型
+// 加载订单并标注类型
 async function loadOrders(){
     resetBtn();
     const total = await contractInstance.methods.orderTotal().call();
@@ -190,7 +188,6 @@ async function pickOrder(id){
     const o = await contractInstance.methods.getOrderInfo(id).call();
     const status = Number(o.status);
 
-    // 计算授信额度
     if(status === 0){
         const val = await contractInstance.methods.getPledgeValue(o.lockedCS).call();
         const maxWei = BigInt(val.toString()) * 60n / 100n;
@@ -201,7 +198,6 @@ async function pickOrder(id){
         maxLoanNum = 0;
     }
 
-    // 计算欠款
     if(status === 1){
         const interest = await contractInstance.methods.calculateInterest(id).call();
         const total = BigInt(o.loanBSDT.toString()) + BigInt(interest.toString());
@@ -213,7 +209,7 @@ async function pickOrder(id){
     setBtn(status);
 }
 
-// 按钮状态
+// 按钮锁定逻辑
 function setBtn(statusNum){
     const btnBorrow = document.getElementById("borrowBtn");
     const btnRepay = document.getElementById("repayBtn");

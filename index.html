@@ -32,13 +32,13 @@ button:disabled{background:#cccccc !important;color:#888;pointer-events:none;}
 <div class="box">
     <div class="tip">最大可质押CS：<span id="csBalance">0</span></div>
     <input type="text" id="pledgeNum" placeholder="输入质押CS数量">
-    <button class="btn-blue" onclick="pledge()">质押CS（自动授权）</button>
+    <button class="btn-blue" onclick="pledge()">质押CS</button>
 </div>
 
 <div class="box">
     <div class="tip">授信上限BSDT：<span id="borrowLimit">0</span></div>
     <input type="text" id="borrowInput" placeholder="手动输入借款BSDT数量">
-    <button class="btn-orange" id="borrowBtn" disabled onclick="borrow()">确认借款（仅消耗Gas）</button>
+    <button class="btn-orange" id="borrowBtn" disabled onclick="borrow()">确认借款</button>
 </div>
 
 <div class="box">
@@ -49,8 +49,8 @@ button:disabled{background:#cccccc !important;color:#888;pointer-events:none;}
 
 <div class="box">
     <input readonly id="orderId">
-    <div class="tip">待还本息BSDT：<span id="debtText">0</span></div>
-    <button class="btn-orange" id="repayBtn" disabled onclick="repay()">归还BSDT（自动授权）</button>
+    <div class="tip">待还BSDT：<span id="debtText">0</span></div>
+    <button class="btn-orange" id="repayBtn" disabled onclick="repay()">归还BSDT</button>
 </div>
 
 <div class="box">

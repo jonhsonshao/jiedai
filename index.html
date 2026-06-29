@@ -37,7 +37,7 @@ button:hover{background:#3b82f6;}
 
     <div class="box">
         <h4>借贷 CK 代币</h4>
-        <input type="number" id="orderIdInput" placeholder="输入质押订单ID">
+        <input type="number" id="orderIdInput" placeholder="订单ID（质押完成自动填充）">
         <div class="tip-text">
             最大可借额度（已自动取整整数）：<span id="borrowTip">0</span>
         </div>
@@ -64,7 +64,6 @@ button:hover{background:#3b82f6;}
 </div>
 
 <script>
-// BSC主网配置
 const CONTRACT_ADDRESS = "0x633B064ac6051E22094cBa8f3425cbaacaB0Ae14";
 const CS = "0x858427abE7e4fa912D26E1e2E8851D5260F0d36e";
 const CK = "0x8a1E70cd348e6c60Ba5F2096e5c89249Ad62231b";
@@ -112,7 +111,7 @@ async function refreshBalance() {
     document.getElementById("maxPledge").innerText = balanceStr;
 }
 
-// 质押：自动校验授权，未授权自动发起授权，随后自动质押
+// 质押成功后自动刷新订单列表
 document.getElementById("pledgeBtn").onclick = async ()=>{
     const amountStr = document.getElementById("pledgeInput").value;
     const amountWei = ethers.utils.parseEther(amountStr);
@@ -124,10 +123,10 @@ document.getElementById("pledgeBtn").onclick = async ()=>{
     }
     await contract.createPledge(amountWei);
     refreshBalance();
-    loadOrders();
+    // 质押完成立刻刷新订单列表
+    await loadOrders();
 };
 
-// 输入质押数量自动实时计算可借额度，自动向下取整整数
 document.getElementById("pledgeInput").oninput = async ()=>{
     try{
         const valWei = ethers.utils.parseEther(document.getElementById("pledgeInput").value);
@@ -159,16 +158,24 @@ document.getElementById("redeemBtn").onclick = async ()=>{
     loadOrders();
 };
 
+// 加载订单，自动把最新订单填充到借贷输入框
 async function loadOrders(){
     const user = await signer.getAddress();
     const ids = await contract.getUserOrders(user,0,30);
     const statusArr = ["质押中","已放款","已结清","已清算","已赎回"];
     let html = "";
+    // 最新订单放在最上面
+    ids.reverse();
     for(let id of ids){
         let info = await contract.getOrderInfo(id);
         html += `<div class="order-item">订单${id} | CS:${ethers.utils.formatEther(info[1])} | CK:${ethers.utils.formatEther(info[2])} | ${statusArr[info[3]]}</div>`;
     }
     document.getElementById("orderList").innerHTML = html;
+
+    // 自动填充最新订单ID到借贷框
+    if(ids.length > 0){
+        document.getElementById("orderIdInput").value = ids[0];
+    }
 }
 
 window.onload = init;

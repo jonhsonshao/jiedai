@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理员后台</title>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.7.0/dist/axios.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:#050512;color:#fff;padding:24px}
+.card{background:#101428;padding:20px;border-radius:12px;margin-bottom:20px;max-width:1100px;margin-left:auto;margin-right:auto}
+input{padding:10px;background:#1b2240;border:1px solid #293056;color:#fff;border-radius:8px;margin:6px}
+button{padding:10px 16px;background:#00b8ff;color:#000;border:none;border-radius:8px;margin:6px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td,th{border:1px solid #293056;padding:8px;text-align:center}
+th{background:#1b2240;color:#924cff}
+</style>
+</head>
+<body>
+<div class="card">
+    <h3>发放排行榜奖励（奖励进入用户自由代币）</h3>
+    <input id="awardWallet" placeholder="用户钱包地址">
+    <input id="awardToken" placeholder="发放代币数量">
+    <button onclick="sendRankReward()">发放榜单奖励</button>
+</div>
+<div class="card">
+    <button onclick="loadAllData()">加载全部业务对账数据</button>
+    <div id="adminBox"></div>
+</div>
+
+<script>
+const token = localStorage.getItem("adminToken");
+axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+async function sendRankReward(){
+    const wallet = document.getElementById("awardWallet").value.trim();
+    const tokenAmount = Number(document.getElementById("awardToken").value);
+    const res = await axios.post("/api/admin/sendRankReward",{wallet,tokenAmount});
+    alert(res.data.msg);
+}
+
+async function loadAllData(){
+    const res = await axios.get("/api/admin/allData");
+    console.log(res.data.data);
+    document.getElementById("adminBox").innerText="数据已打印到浏览器控制台，可复制导出快照用于后期上链";
+}
+</script>
+</body>
+</html>

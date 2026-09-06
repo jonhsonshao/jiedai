@@ -10,26 +10,55 @@
 body{background:#050512;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh}
 .login{background:#101428;padding:28px;border-radius:12px;width:360px}
 input{width:100%;padding:12px;background:#1b2240;border:1px solid #293056;color:#fff;border-radius:8px;margin:8px 0}
-button{width:100%;padding:12px;background:#00b8ff;border:none;border-radius:8px;color:#000}
+button{width:100%;padding:12px;background:#00b8ff;border:none;border-radius:8px;color:#000;cursor:pointer;font-weight:bold}
+button:active{opacity:0.8}
+h3{text-align:center;margin-bottom:16px}
+.tip{color:#ff6b6b;font-size:13px;text-align:center;margin-top:10px}
 </style>
 </head>
 <body>
 <div class="login">
-    <h3 style="text-align:center;margin-bottom:16px">管理员登录</h3>
+    <h3>管理员登录</h3>
     <input id="username" placeholder="账号" value="admin">
     <input id="pwd" placeholder="密码" value="123456">
     <button onclick="login()">登录后台</button>
+    <div class="tip" id="msgTip"></div>
 </div>
+
 <script>
+// 后端接口地址（本地调试）
+const API_BASE = "http://127.0.0.1:8080";
+
 async function login(){
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("pwd").value;
-    const res = await axios.post("/api/admin/login",{username,password});
-    if(res.data.code===200){
-        localStorage.setItem("adminToken",res.data.data.token);
-        location.href="admin.html";
-    }else{
-        alert(res.data.msg);
+    const tipDom = document.getElementById("msgTip");
+    tipDom.innerText = "";
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("pwd").value.trim();
+
+    if(!username || !password){
+        tipDom.innerText = "请输入账号密码";
+        return;
+    }
+
+    try {
+        const res = await axios.post(`${API_BASE}/api/admin/login`,{
+            username,
+            password
+        });
+        if(res.data.code === 200){
+            localStorage.setItem("adminToken", res.data.data.token);
+            // 跳转到后台页面
+            window.location.href = "admin.html";
+        }else{
+            tipDom.innerText = res.data.msg;
+        }
+    } catch (err) {
+        console.error(err);
+        if(err.message.includes("Network Error")){
+            tipDom.innerText = "❌ 无法连接后端，请先启动 node app.js";
+        }else{
+            tipDom.innerText = "请求异常：" + err.message;
+        }
     }
 }
 </script>

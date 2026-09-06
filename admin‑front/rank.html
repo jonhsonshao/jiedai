@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推荐排行榜</title>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.7.0/dist/axios.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system}
+body{background:#050512;color:#fff;padding:24px}
+.container{max-width:920px;margin:0 auto;background:#101428;padding:28px;border-radius:14px}
+.back{color:#00b8ff;margin-bottom:16px;cursor:pointer}
+h2{text-align:center;margin-bottom:24px;color:#00b8ff}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #293056;padding:14px;text-align:center;font-size:14px}
+th{background:#1b2240;color:#924cff}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="back" onclick="history.back()">← 返回首页</div>
+    <h2>推荐排行榜</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>排名</th>
+                <th>钱包地址</th>
+                <th>推荐二号池人数</th>
+                <th>推荐三号池人数</th>
+                <th>有效推荐总数</th>
+            </tr>
+        </thead>
+        <tbody id="rankBody"></tbody>
+    </table>
+</div>
+<script>
+const API_PREFIX = "/api";
+async function getRank(){
+    const res = await axios.get(`${API_PREFIX}/rank/list`);
+    const arr = res.data.data;
+    let html = "";
+    arr.forEach((item,i)=>{
+        html += `<tr>
+            <td>${i+1}</td>
+            <td>${item.wallet}</td>
+            <td>${item.refPool2Count}</td>
+            <td>${item.refPool3Count}</td>
+            <td>${item.refTotalCount}</td>
+        </tr>`
+    })
+    document.getElementById("rankBody").innerHTML = html;
+}
+getRank();
+</script>
+</body>
+</html>

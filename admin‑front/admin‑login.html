@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理员登录</title>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.7.0/dist/axios.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:#050512;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh}
+.login{background:#101428;padding:28px;border-radius:12px;width:360px}
+input{width:100%;padding:12px;background:#1b2240;border:1px solid #293056;color:#fff;border-radius:8px;margin:8px 0}
+button{width:100%;padding:12px;background:#00b8ff;border:none;border-radius:8px;color:#000}
+</style>
+</head>
+<body>
+<div class="login">
+    <h3 style="text-align:center;margin-bottom:16px">管理员登录</h3>
+    <input id="username" placeholder="账号" value="admin">
+    <input id="pwd" placeholder="密码" value="123456">
+    <button onclick="login()">登录后台</button>
+</div>
+<script>
+async function login(){
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("pwd").value;
+    const res = await axios.post("/api/admin/login",{username,password});
+    if(res.data.code===200){
+        localStorage.setItem("adminToken",res.data.data.token);
+        location.href="admin.html";
+    }else{
+        alert(res.data.msg);
+    }
+}
+</script>
+</body>
+</html>

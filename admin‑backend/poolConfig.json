@@ -1,0 +1,24 @@
+{
+  "pool1": {
+    "name": "创始节点｜一号基金池（神王权益）",
+    "payUsdt": 1000,
+    "maxNum": 10,
+    "lockDay": 730
+  },
+  "pool2": {
+    "name": "共建节点｜二号基金池",
+    "payUsdt": 100,
+    "tokenGet": 200000,
+    "maxNum": 500,
+    "lockDay": 365
+  },
+  "pool3": {
+    "name": "基础共识｜三号私募池",
+    "payUsdt": 10,
+    "price": 0.0008,
+    "lockDay": 180
+  },
+  "exchangeRule": {
+    "tokenPerUsdt": 1000
+  }
+}

@@ -3,304 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NewEra 新纪元 | 首页</title>
+<title>NewEra 新纪元 | 数字资产生态系统</title>
 <script src="https://cdn.jsdelivr.net/npm/web3@4.8.0/dist/web3.min.js"></script>
-<style>
-*{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-}
-:root{
-    --era-blue:#00b8ff;
-    --era-purple:#924cff;
-    --main-gradient:linear-gradient(90deg,#00b8ff,#924cff);
-}
-body{
-    background:#05050a;
-    color:#fff;
-}
-/* ========== 顶部导航栏（右上角菜单+钱包地址） ========== */
-.topHeader{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:70px;
-    background:rgba(8,8,14,0.92);
-    backdrop-filter: blur(8px);
-    border-bottom:1px solid #222444;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 24px;
-    z-index:1000;
-}
-.logoText{
-    font-size:22px;
-    font-weight:bold;
-    background:var(--main-gradient);
-    -webkit-background-clip:text;
-    color:transparent;
-}
-.headerRight{
-    display:flex;
-    gap:16px;
-    align-items:center;
-}
-.walletInfo{
-    padding:8px 14px;
-    border:1px solid #00b8ff50;
-    border-radius:30px;
-    color:#9cf;
-    font-size:14px;
-}
-.connectBtn{
-    padding:9px 18px;
-    border:none;
-    background:var(--main-gradient);
-    color:#fff;
-    border-radius:8px;
-    cursor:pointer;
-    font-weight:600;
-}
-.menuToggleBtn{
-    padding:9px 14px;
-    border:1px solid #924cff80;
-    background:#121226;
-    color:#fff;
-    border-radius:8px;
-    cursor:pointer;
-}
-
-/* ========== 侧边抽屉（从右侧滑出） ========== */
-.sideDrawer{
-    position:fixed;
-    top:70px;
-    right:-280px;
-    width:280px;
-    height:calc(100vh - 70px);
-    background:#0c0c18;
-    border-left:1px solid #222;
-    transition:right 0.3s ease;
-    z-index:999;
-    padding:30px 20px;
-}
-.sideDrawer.open{
-    right:0;
-}
-.drawerMask{
-    display:none;
-    position:fixed;
-    inset:70px 0 0 0;
-    background:rgba(0,0,0,0.55);
-    z-index:998;
-}
-.drawerMask.open{
-    display:block;
-}
-.drawerTitle{
-    font-size:22px;
-    font-weight:bold;
-    background:var(--main-gradient);
-    -webkit-background-clip:text;
-    color:transparent;
-    margin-bottom:30px;
-}
-.drawerNav a{
-    display:block;
-    padding:14px 10px;
-    color:#c9c9e8;
-    text-decoration:none;
-    border-radius:8px;
-    margin-bottom:8px;
-    transition:0.2s;
-}
-.drawerNav a:hover{
-    background:rgba(0,184,255,0.15);
-    color:#fff;
-}
-
-.container{
-    max-width:1200px;
-    margin:0 auto;
-    padding:90px 20px 40px;
-}
-.sectionCard{
-    background:#0e0e1b;
-    border:1px solid #202042;
-    border-radius:16px;
-    padding:32px;
-    margin-bottom:32px;
-}
-.sectionCard h2{
-    font-size:26px;
-    margin-bottom:18px;
-    background:var(--main-gradient);
-    -webkit-background-clip:text;
-    color:transparent;
-}
-.sectionCard p{
-    color:#b8b8d8;
-    line-height:1.7;
-    font-size:16px;
-}
-.videoWrap{
-    width:100%;
-    border-radius:12px;
-    overflow:hidden;
-    background:#000;
-    margin-top:16px;
-}
-video{
-    width:100%;
-    display:block;
-}
-.enterBtn{
-    display:inline-block;
-    margin-top:20px;
-    padding:12px 28px;
-    background:var(--main-gradient);
-    color:#fff;
-    text-decoration:none;
-    border-radius:10px;
-    font-weight:600;
-}
-.enterBtn:hover{
-    opacity:0.9;
-}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<!-- 顶部导航 -->
-<header class="topHeader">
-    <div class="logoText">NewEra 新纪元</div>
-    <div class="headerRight">
-        <!-- 钱包区域，未连接显示按钮，连接后展示钱包地址 -->
-        <div id="walletBox">
-            <button class="connectBtn" id="connectWallet">连接钱包</button>
+
+<header class="header-bar">
+    <div class="logo-wrap" onclick="location.href='index.html'">
+        <img src="logo.png" alt="Logo" class="logo-img">
+        <div class="logo-text">NewEra</div>
+    </div>
+    <div class="header-right">
+        <div class="wallet-box" id="walletBtn">连接钱包</div>
+        <div class="menu-trigger" id="menuBtn">
+            <span></span>
+            <span></span>
+            <span></span>
         </div>
-        <button class="menuToggleBtn" id="menuBtn">☰ 菜单</button>
     </div>
 </header>
 
-<!-- 右侧侧边抽屉 -->
-<div class="sideDrawer" id="drawer">
-    <div class="drawerTitle">导航菜单</div>
-    <nav class="drawerNav">
-        <a href="index.html">🏠 首页</a>
-        <a href="rule.html">📜 代币发行规则</a>
-        <a href="fund.html">🏛️ 基金会（1/2/3期）</a>
-        <a href="public.html">📢 公募</a>
-        <a href="exchange.html">🔄 公平兑换</a>
-        <a href="airdrop.html">🎁 空投</a>
-    </nav>
+<div class="side-nav" id="sideMenu">
+    <h3>导航菜单</h3>
+    <div class="nav-item" onclick="location.href='index.html'">首页</div>
+    <div class="nav-item" onclick="location.href='pool1.html'">一号基金池</div>
+    <div class="nav-item" onclick="location.href='pool2.html'">二号基金池</div>
+    <div class="nav-item" onclick="location.href='pool3.html'">三号基金池</div>
+    <div class="nav-item" onclick="location.href='pool4.html'">四号质押池</div>
+    <div class="nav-item" onclick="location.href='pool5.html'">五号公平发射</div>
+    <div class="nav-item" onclick="location.href='pool6.html'">六号空投池</div>
+    <div class="nav-item" onclick="location.href='rule.html'">代币发行与获取规则</div>
+    <div class="nav-item" onclick="location.href='share.html'">我的推广链接</div>
 </div>
-<div class="drawerMask" id="mask"></div>
 
-<div class="container">
-    <!-- 板块1：项目说明 -->
-    <div class="sectionCard">
-        <h2>项目说明</h2>
-        <p>NewEra新纪元生态，前期采用后台记账模式记录所有认购、锁仓、代币与推荐奖励数据。
-        一期、二期、三期基金会招募完成后，统一切换链上模式，发放对应链上资产。
-        所有认购记录、锁仓释放、推荐奖励、空投、兑换均由后台系统记账管理。</p>
+<div class="main-wrap">
+    <h1 class="hero-title">NewEra 新纪元生态</h1>
+
+    <div class="desc-card">
+        <p>基于BSC公链搭建去中心化数字资产生态，一站式兑换、质押、流动性服务。该代币将区别于市场上其他各种韭菜币，土狗币，而是想要打造一个真正意义上有价值的区块链代币，通过强共识模型让所有参与者都可以找到归属，让市值做到稳步上涨，让代币价值体系越来越高，通过锁仓所有前期参与者的方式，来组建强有力的铁军体系，打造更有力的未来生态体系，同时，给予更多的人一个机会参与首发，也将给予更多的人自愿前来搭建生态体系。</p>
     </div>
 
-    <!-- 板块2：宣传视频 -->
-    <div class="sectionCard">
-        <h2>宣传视频</h2>
-        <p>NewEra项目介绍宣传片</p>
-        <div class="videoWrap">
-            <video controls>
-                <source src="./promo.mp4" type="video/mp4">
-                您的浏览器不支持视频播放，请替换视频src地址
-            </video>
+    <div class="card-grid">
+        <div class="card pool1">
+            <h2>一号基金池</h2>
+            <p>创始节点｜1000 USDT/份，限10名，锁仓2年，2年后每月5%线性释放。</p>
+            <button class="enter-btn" onclick="location.href='pool1.html'">立即进入</button>
+        </div>
+
+        <div class="card pool2">
+            <h2>二号基金池</h2>
+            <p>共建节点｜100 USDT/份，限500名，锁仓1年，1年后每月4%线性释放。</p>
+            <button class="enter-btn" onclick="location.href='pool2.html'">立即进入</button>
+        </div>
+
+        <div class="card pool3">
+            <h2>三号基金池</h2>
+            <p>基础共识私募｜10 USDT/份，锁仓180天，到期每日1%线性释放。</p>
+            <button class="enter-btn" onclick="location.href='pool3.html'">立即进入</button>
+        </div>
+
+        <div class="card pool4">
+            <h2>四号基金池</h2>
+            <p>质押产出｜1亿枚，按质押额每日1%获得，周期110天，10%数量增益。</p>
+            <button class="enter-btn" onclick="location.href='pool4.html'">立即进入</button>
+        </div>
+
+        <div class="card pool5">
+            <h2>五号基金池</h2>
+            <p>公平发射｜2亿枚，开盘价公平兑换，100天内兑完截止，未兑完部分全部销毁。</p>
+            <button class="enter-btn" onclick="location.href='pool5.html'">立即进入</button>
+        </div>
+
+        <div class="card pool6">
+            <h2>六号基金池</h2>
+            <p>空投池｜2亿枚，每个地址每24小时可领取一次，每次100枚，领完为止。</p>
+            <button class="enter-btn" onclick="location.href='pool6.html'">立即进入</button>
         </div>
     </div>
-
-    <!-- 板块3：基金会入口 -->
-    <div class="sectionCard">
-        <h2>基金会</h2>
-        <p>创始节点、共建节点、基础共识者私募，三期基金池统一在此入口进入。前期后台记账，记录用户认购份额、锁仓代币、分红权益，招募完成后统一上链发放资产。</p>
-        <a href="fund.html" class="enterBtn">进入基金会</a>
-    </div>
-
-    <!-- 板块4：公募 -->
-    <div class="sectionCard">
-        <h2>公募</h2>
-        <p>公募板块，查看公募规则、参与额度、名额、记账记录。</p>
-        <a href="public.html" class="enterBtn">进入公募</a>
-    </div>
-
-    <!-- 板块5：公平兑换 -->
-    <div class="sectionCard">
-        <h2>公平兑换</h2>
-        <p>代币兑换端口，可按设定比例进行代币兑换，兑换记录后台存储。</p>
-        <a href="exchange.html" class="enterBtn">进入公平兑换</a>
-    </div>
-
-    <!-- 板块6：空投 -->
-    <div class="sectionCard">
-        <h2>空投</h2>
-        <p>生态空投奖励，推荐奖励、活动空投，空投代币不锁仓，后台实时记录可支配代币数量。</p>
-        <a href="airdrop.html" class="enterBtn">进入空投</a>
-    </div>
 </div>
 
+<script src="common.js"></script>
 <script>
-// 侧边抽屉逻辑
-const drawer = document.getElementById('drawer');
-const mask = document.getElementById('mask');
-const menuBtn = document.getElementById('menuBtn');
-
-menuBtn.onclick = ()=>{
-    drawer.classList.add('open');
-    mask.classList.add('open');
-}
-mask.onclick = ()=>{
-    drawer.classList.remove('open');
-    mask.classList.remove('open');
-}
-
-// ========== 钱包连接逻辑 Web3 v4 ==========
-const walletBox = document.getElementById("walletBox");
-const connectBtn = document.getElementById("connectWallet");
-let currentAccount = null;
-
-async function connectMetaMask() {
-    if (!window.ethereum) {
-        alert("未检测到钱包，请安装MetaMask");
-        return;
-    }
-    try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        currentAccount = accounts[0];
-        // 地址简写 0x123...abcd
-        const shortAddr = currentAccount.slice(0,6) + "..." + currentAccount.slice(-4);
-        walletBox.innerHTML = `<div class="walletInfo">${shortAddr}</div>`;
-        // 这里后续可以把地址传给后端，绑定用户账户
-        console.log("已连接钱包地址：", currentAccount);
-    } catch(err) {
-        console.error("连接失败",err);
-    }
-}
-connectBtn.addEventListener('click', connectMetaMask);
-
-// 监听钱包切换账号
-if(window.ethereum){
-    window.ethereum.on('accountsChanged', (accounts)=>{
-        if(accounts.length === 0){
-            walletBox.innerHTML = `<button class="connectBtn" id="connectWallet">连接钱包</button>`;
-            currentAccount = null;
-        }else{
-            currentAccount = accounts[0];
-            const shortAddr = currentAccount.slice(0,6) + "..." + currentAccount.slice(-4);
-            walletBox.innerHTML = `<div class="walletInfo">${shortAddr}</div>`;
-        }
-    })
-}
+document.querySelector(".pool4 .enter-btn").onclick = function(){
+    alert("四号基金池页面待开发");
+};
+document.querySelector(".pool5 .enter-btn").onclick = function(){
+    alert("五号基金池页面待开发");
+};
+document.querySelector(".pool6 .enter-btn").onclick = function(){
+    alert("六号基金池页面待开发");
+};
 </script>
+
 </body>
 </html>

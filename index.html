@@ -1,185 +1,215 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CS-CK 质押借贷平台</title>
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<title>NewEra 新纪元 | 首页</title>
+<script src="https://cdn.jsdelivr.net/npm/web3@4.8.0/dist/web3.min.js"></script>
 <style>
-*{margin: 0;padding: 0;box-sizing: border-box;font-family: system-ui;}
-body{background: #0f172a;color: #f1f5f9;padding: 24px;}
-.container{max-width: 620px;margin: 0 auto;}
-.wallet-bar{background: #1e293b;padding: 14px 18px;border-radius: 12px;margin-bottom: 16px;border: 1px solid #334155;}
-.wallet-bar p{font-size: 14px;color:#94a3b8;}
-.box{background: #1e293b;border: 1px solid #334155;border-radius: 12px;padding: 20px;margin-bottom: 16px;}
-.box h4{color:#ffffff;margin-bottom:12px;font-size:16px;}
-.tip-text{font-size:13px;color:#67e8f9;margin-bottom:10px;}
-input{width:100%;background:#0f172a;border:1px solid #475569;color:#fff;padding:12px 14px;border-radius:8px;margin-bottom:12px;font-size:15px;}
-button{width:100%;padding:12px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:15px;font-weight:500;cursor:pointer;transition:0.2s;}
-button:hover{background:#3b82f6;}
-.order-item{font-size:13px;color:#cbd5e1;padding:6px 0;border-bottom:1px solid #334155;}
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+}
+:root{
+    --era-blue:#00b8ff;
+    --era-purple:#924cff;
+    --main-gradient:linear-gradient(90deg,#00b8ff,#924cff);
+}
+body{
+    background:#05050a;
+    color:#fff;
+}
+/* 侧边抽屉 */
+.sideDrawer{
+    position:fixed;
+    top:0;
+    left:-280px;
+    width:280px;
+    height:100vh;
+    background:#0c0c18;
+    border-right:1px solid #222;
+    transition:left 0.3s ease;
+    z-index:999;
+    padding:30px 20px;
+}
+.sideDrawer.open{
+    left:0;
+}
+.drawerMask{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    z-index:998;
+}
+.drawerMask.open{
+    display:block;
+}
+.drawerTitle{
+    font-size:22px;
+    font-weight:bold;
+    background:var(--main-gradient);
+    -webkit-background-clip:text;
+    color:transparent;
+    margin-bottom:30px;
+}
+.drawerNav a{
+    display:block;
+    padding:14px 10px;
+    color:#c9c9e8;
+    text-decoration:none;
+    border-radius:8px;
+    margin-bottom:8px;
+    transition:0.2s;
+}
+.drawerNav a:hover{
+    background:rgba(0,184,255,0.15);
+    color:#fff;
+}
+.menuBtn{
+    position:fixed;
+    top:16px;
+    left:16px;
+    z-index:1000;
+    border:none;
+    background:var(--main-gradient);
+    color:#fff;
+    padding:10px 16px;
+    border-radius:8px;
+    cursor:pointer;
+}
+.container{
+    max-width:1200px;
+    margin:0 auto;
+    padding:80px 20px;
+}
+.sectionCard{
+    background:#0e0e1b;
+    border:1px solid #202042;
+    border-radius:16px;
+    padding:32px;
+    margin-bottom:32px;
+}
+.sectionCard h2{
+    font-size:26px;
+    margin-bottom:18px;
+    background:var(--main-gradient);
+    -webkit-background-clip:text;
+    color:transparent;
+}
+.sectionCard p{
+    color:#b8b8d8;
+    line-height:1.7;
+    font-size:16px;
+}
+.videoWrap{
+    width:100%;
+    border-radius:12px;
+    overflow:hidden;
+    background:#000;
+    margin-top:16px;
+}
+video{
+    width:100%;
+    display:block;
+}
+.enterBtn{
+    display:inline-block;
+    margin-top:20px;
+    padding:12px 28px;
+    background:var(--main-gradient);
+    color:#fff;
+    text-decoration:none;
+    border-radius:10px;
+    font-weight:600;
+}
+.enterBtn:hover{
+    opacity:0.9;
+}
 </style>
 </head>
 <body>
+<!-- 侧边抽屉 -->
+<div class="sideDrawer" id="drawer">
+    <div class="drawerTitle">NewEra 导航</div>
+    <nav class="drawerNav">
+        <a href="index.html">🏠 首页</a>
+        <a href="rule.html">📜 代币发行规则</a>
+        <a href="fund.html">🏛️ 基金会（1/2/3期）</a>
+        <a href="public.html">📢 公募</a>
+        <a href="exchange.html">🔄 公平兑换</a>
+        <a href="airdrop.html">🎁 空投</a>
+    </nav>
+</div>
+<div class="drawerMask" id="mask"></div>
+<button class="menuBtn" id="menuBtn">☰ 菜单</button>
+
 <div class="container">
-    <div class="wallet-bar">
-        <p>钱包地址：<span id="walletAddr">正在连接...</span></p>
+    <!-- 板块1：项目说明 -->
+    <div class="sectionCard">
+        <h2>项目说明</h2>
+        <p>NewEra新纪元生态，前期采用后台记账模式记录所有认购、锁仓、代币与推荐奖励数据。
+        一期、二期、三期基金会招募完成后，统一切换链上模式，发放对应链上资产。
+        所有认购记录、锁仓释放、推荐奖励、空投、兑换均由后台系统记账管理。</p>
     </div>
 
-    <div class="box">
-        <h4>质押 CS 代币</h4>
-        <div class="tip-text">
-            账户余额：<span id="csBalance">0</span> &nbsp;｜&nbsp; 最大可质押：<span id="maxPledge">0</span>
+    <!-- 板块2：宣传视频 -->
+    <div class="sectionCard">
+        <h2>宣传视频</h2>
+        <p>NewEra项目介绍宣传片</p>
+        <div class="videoWrap">
+            <video controls>
+                <source src="./promo.mp4" type="video/mp4">
+                您的浏览器不支持视频播放，请替换视频src地址
+            </video>
         </div>
-        <input type="number" id="pledgeInput" placeholder="输入质押数量">
-        <button id="pledgeBtn">确认质押</button>
     </div>
 
-    <div class="box">
-        <h4>借贷 CK 代币</h4>
-        <input type="number" id="orderIdInput" placeholder="订单ID（质押完成自动填充）">
-        <div class="tip-text">
-            最大可借额度（已自动取整整数）：<span id="borrowTip">0</span>
-        </div>
-        <input type="number" id="borrowInput" placeholder="可借贷数量">
-        <button id="borrowBtn">确认借贷</button>
+    <!-- 板块3：基金会入口（跳转fund.html，一号/二号/三号基金放在fund页面） -->
+    <div class="sectionCard">
+        <h2>基金会</h2>
+        <p>创始节点、共建节点、基础共识者私募，三期基金池统一在此入口进入。前期后台记账，记录用户认购份额、锁仓代币、分红权益，招募完成后统一上链发放资产。</p>
+        <a href="fund.html" class="enterBtn">进入基金会</a>
     </div>
 
-    <div class="box">
-        <h4>全额还清债务</h4>
-        <input type="number" id="repayOrderId" placeholder="输入订单ID">
-        <button id="repayBtn">一键还款</button>
+    <!-- 板块4：公募 -->
+    <div class="sectionCard">
+        <h2>公募</h2>
+        <p>公募板块，查看公募规则、参与额度、名额、记账记录。</p>
+        <a href="public.html" class="enterBtn">进入公募</a>
     </div>
 
-    <div class="box">
-        <h4>赎回质押资产</h4>
-        <input type="number" id="redeemOrderId" placeholder="输入订单ID">
-        <button id="redeemBtn">赎回CS</button>
+    <!-- 板块5：公平兑换 -->
+    <div class="sectionCard">
+        <h2>公平兑换</h2>
+        <p>代币兑换端口，可按设定比例进行代币兑换，兑换记录后台存储。</p>
+        <a href="exchange.html" class="enterBtn">进入公平兑换</a>
     </div>
 
-    <div class="box">
-        <h4>我的全部订单</h4>
-        <div id="orderList"></div>
+    <!-- 板块6：空投 -->
+    <div class="sectionCard">
+        <h2>空投</h2>
+        <p>生态空投奖励，推荐奖励、活动空投，空投代币不锁仓，后台实时记录可支配代币数量。</p>
+        <a href="airdrop.html" class="enterBtn">进入空投</a>
     </div>
 </div>
 
 <script>
-const CONTRACT_ADDRESS = "0x633B064ac6051E22094cBa8f3425cbaacaB0Ae14";
-const CS = "0x858427abE7e4fa912D26E1e2E8851D5260F0d36e";
-const CK = "0x8a1E70cd348e6c60Ba5F2096e5c89249Ad62231b";
+//侧边抽屉逻辑
+const drawer = document.getElementById('drawer');
+const mask = document.getElementById('mask');
+const menuBtn = document.getElementById('menuBtn');
 
-const ERC20ABI = [
-    "function approve(address spender,uint256 amount) returns(bool)",
-    "function balanceOf(address) view returns(uint256)",
-    "function allowance(address owner,address spender) view returns(uint256)"
-];
-
-const MainABI = [
-    "function createPledge(uint256 csAmount) external",
-    "function borrowSingle(uint256 orderId,uint256 borrowAmount) external",
-    "function repayLoan(uint256 orderId) external",
-    "function redeemPledge(uint256 orderId) external",
-    "function getSpotValue(uint256 csAmount) view returns(uint256)",
-    "function getUserOrders(address user,uint256 page,uint256 size) view returns(uint256[])",
-    "function getOrderInfo(uint256 orderId) view returns(address,uint256,uint256,uint8)"
-];
-
-let provider, signer, contract, csContract;
-
-async function init() {
-    if (!window.ethereum) {
-        alert("未检测到钱包插件");
-        return;
-    }
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    const addr = await signer.getAddress();
-    document.getElementById("walletAddr").innerText = addr;
-
-    contract = new ethers.Contract(CONTRACT_ADDRESS, MainABI, signer);
-    csContract = new ethers.Contract(CS, ERC20ABI, signer);
-
-    await refreshBalance();
-    await loadOrders();
+menuBtn.onclick = ()=>{
+    drawer.classList.add('open');
+    mask.classList.add('open');
 }
-
-async function refreshBalance() {
-    const bn = await csContract.balanceOf(await signer.getAddress());
-    const balanceStr = ethers.utils.formatEther(bn);
-    document.getElementById("csBalance").innerText = balanceStr;
-    document.getElementById("maxPledge").innerText = balanceStr;
+mask.onclick = ()=>{
+    drawer.classList.remove('open');
+    mask.classList.remove('open');
 }
-
-// 质押成功后自动刷新订单列表
-document.getElementById("pledgeBtn").onclick = async ()=>{
-    const amountStr = document.getElementById("pledgeInput").value;
-    const amountWei = ethers.utils.parseEther(amountStr);
-    const owner = await signer.getAddress();
-    const allowanceWei = await csContract.allowance(owner, CONTRACT_ADDRESS);
-
-    if (allowanceWei.lt(amountWei)) {
-        await csContract.approve(CONTRACT_ADDRESS, ethers.constants.MaxUint256);
-    }
-    await contract.createPledge(amountWei);
-    refreshBalance();
-    // 质押完成立刻刷新订单列表
-    await loadOrders();
-};
-
-document.getElementById("pledgeInput").oninput = async ()=>{
-    try{
-        const valWei = ethers.utils.parseEther(document.getElementById("pledgeInput").value);
-        const value = await contract.getSpotValue(valWei);
-        let borrowWei = value.mul(60).div(100);
-        let num = Math.floor(Number(ethers.utils.formatEther(borrowWei)));
-        document.getElementById("borrowTip").innerText = num;
-        document.getElementById("borrowInput").value = num;
-    }catch(e){}
-};
-
-document.getElementById("borrowBtn").onclick = async ()=>{
-    const oid = document.getElementById("orderIdInput").value;
-    const numWei = ethers.utils.parseEther(document.getElementById("borrowInput").value);
-    await contract.borrowSingle(oid, numWei);
-    loadOrders();
-};
-
-document.getElementById("repayBtn").onclick = async ()=>{
-    const oid = document.getElementById("repayOrderId").value;
-    await contract.repayLoan(oid);
-    loadOrders();
-};
-
-document.getElementById("redeemBtn").onclick = async ()=>{
-    const oid = document.getElementById("redeemOrderId").value;
-    await contract.redeemPledge(oid);
-    refreshBalance();
-    loadOrders();
-};
-
-// 加载订单，自动把最新订单填充到借贷输入框
-async function loadOrders(){
-    const user = await signer.getAddress();
-    const ids = await contract.getUserOrders(user,0,30);
-    const statusArr = ["质押中","已放款","已结清","已清算","已赎回"];
-    let html = "";
-    // 最新订单放在最上面
-    ids.reverse();
-    for(let id of ids){
-        let info = await contract.getOrderInfo(id);
-        html += `<div class="order-item">订单${id} | CS:${ethers.utils.formatEther(info[1])} | CK:${ethers.utils.formatEther(info[2])} | ${statusArr[info[3]]}</div>`;
-    }
-    document.getElementById("orderList").innerHTML = html;
-
-    // 自动填充最新订单ID到借贷框
-    if(ids.length > 0){
-        document.getElementById("orderIdInput").value = ids[0];
-    }
-}
-
-window.onload = init;
 </script>
-</div>
 </body>
 </html>

@@ -21,27 +21,80 @@ body{
     background:#05050a;
     color:#fff;
 }
-/* 侧边抽屉 */
-.sideDrawer{
+/* ========== 顶部导航栏（右上角菜单+钱包地址） ========== */
+.topHeader{
     position:fixed;
     top:0;
-    left:-280px;
+    left:0;
+    width:100%;
+    height:70px;
+    background:rgba(8,8,14,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom:1px solid #222444;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 24px;
+    z-index:1000;
+}
+.logoText{
+    font-size:22px;
+    font-weight:bold;
+    background:var(--main-gradient);
+    -webkit-background-clip:text;
+    color:transparent;
+}
+.headerRight{
+    display:flex;
+    gap:16px;
+    align-items:center;
+}
+.walletInfo{
+    padding:8px 14px;
+    border:1px solid #00b8ff50;
+    border-radius:30px;
+    color:#9cf;
+    font-size:14px;
+}
+.connectBtn{
+    padding:9px 18px;
+    border:none;
+    background:var(--main-gradient);
+    color:#fff;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+}
+.menuToggleBtn{
+    padding:9px 14px;
+    border:1px solid #924cff80;
+    background:#121226;
+    color:#fff;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+/* ========== 侧边抽屉（从右侧滑出） ========== */
+.sideDrawer{
+    position:fixed;
+    top:70px;
+    right:-280px;
     width:280px;
-    height:100vh;
+    height:calc(100vh - 70px);
     background:#0c0c18;
-    border-right:1px solid #222;
-    transition:left 0.3s ease;
+    border-left:1px solid #222;
+    transition:right 0.3s ease;
     z-index:999;
     padding:30px 20px;
 }
 .sideDrawer.open{
-    left:0;
+    right:0;
 }
 .drawerMask{
     display:none;
     position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.6);
+    inset:70px 0 0 0;
+    background:rgba(0,0,0,0.55);
     z-index:998;
 }
 .drawerMask.open{
@@ -68,22 +121,11 @@ body{
     background:rgba(0,184,255,0.15);
     color:#fff;
 }
-.menuBtn{
-    position:fixed;
-    top:16px;
-    left:16px;
-    z-index:1000;
-    border:none;
-    background:var(--main-gradient);
-    color:#fff;
-    padding:10px 16px;
-    border-radius:8px;
-    cursor:pointer;
-}
+
 .container{
     max-width:1200px;
     margin:0 auto;
-    padding:80px 20px;
+    padding:90px 20px 40px;
 }
 .sectionCard{
     background:#0e0e1b;
@@ -131,9 +173,21 @@ video{
 </style>
 </head>
 <body>
-<!-- 侧边抽屉 -->
+<!-- 顶部导航 -->
+<header class="topHeader">
+    <div class="logoText">NewEra 新纪元</div>
+    <div class="headerRight">
+        <!-- 钱包区域，未连接显示按钮，连接后展示钱包地址 -->
+        <div id="walletBox">
+            <button class="connectBtn" id="connectWallet">连接钱包</button>
+        </div>
+        <button class="menuToggleBtn" id="menuBtn">☰ 菜单</button>
+    </div>
+</header>
+
+<!-- 右侧侧边抽屉 -->
 <div class="sideDrawer" id="drawer">
-    <div class="drawerTitle">NewEra 导航</div>
+    <div class="drawerTitle">导航菜单</div>
     <nav class="drawerNav">
         <a href="index.html">🏠 首页</a>
         <a href="rule.html">📜 代币发行规则</a>
@@ -144,7 +198,6 @@ video{
     </nav>
 </div>
 <div class="drawerMask" id="mask"></div>
-<button class="menuBtn" id="menuBtn">☰ 菜单</button>
 
 <div class="container">
     <!-- 板块1：项目说明 -->
@@ -167,7 +220,7 @@ video{
         </div>
     </div>
 
-    <!-- 板块3：基金会入口（跳转fund.html，一号/二号/三号基金放在fund页面） -->
+    <!-- 板块3：基金会入口 -->
     <div class="sectionCard">
         <h2>基金会</h2>
         <p>创始节点、共建节点、基础共识者私募，三期基金池统一在此入口进入。前期后台记账，记录用户认购份额、锁仓代币、分红权益，招募完成后统一上链发放资产。</p>
@@ -197,7 +250,7 @@ video{
 </div>
 
 <script>
-//侧边抽屉逻辑
+// 侧边抽屉逻辑
 const drawer = document.getElementById('drawer');
 const mask = document.getElementById('mask');
 const menuBtn = document.getElementById('menuBtn');
@@ -209,6 +262,44 @@ menuBtn.onclick = ()=>{
 mask.onclick = ()=>{
     drawer.classList.remove('open');
     mask.classList.remove('open');
+}
+
+// ========== 钱包连接逻辑 Web3 v4 ==========
+const walletBox = document.getElementById("walletBox");
+const connectBtn = document.getElementById("connectWallet");
+let currentAccount = null;
+
+async function connectMetaMask() {
+    if (!window.ethereum) {
+        alert("未检测到钱包，请安装MetaMask");
+        return;
+    }
+    try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        currentAccount = accounts[0];
+        // 地址简写 0x123...abcd
+        const shortAddr = currentAccount.slice(0,6) + "..." + currentAccount.slice(-4);
+        walletBox.innerHTML = `<div class="walletInfo">${shortAddr}</div>`;
+        // 这里后续可以把地址传给后端，绑定用户账户
+        console.log("已连接钱包地址：", currentAccount);
+    } catch(err) {
+        console.error("连接失败",err);
+    }
+}
+connectBtn.addEventListener('click', connectMetaMask);
+
+// 监听钱包切换账号
+if(window.ethereum){
+    window.ethereum.on('accountsChanged', (accounts)=>{
+        if(accounts.length === 0){
+            walletBox.innerHTML = `<button class="connectBtn" id="connectWallet">连接钱包</button>`;
+            currentAccount = null;
+        }else{
+            currentAccount = accounts[0];
+            const shortAddr = currentAccount.slice(0,6) + "..." + currentAccount.slice(-4);
+            walletBox.innerHTML = `<div class="walletInfo">${shortAddr}</div>`;
+        }
+    })
 }
 </script>
 </body>
